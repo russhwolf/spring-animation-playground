@@ -2,6 +2,7 @@ package com.brucelet.playground.dynamicanimation;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.support.animation.DynamicAnimation;
 import android.support.animation.SpringAnimation;
 import android.view.MotionEvent;
 import android.view.VelocityTracker;
@@ -12,7 +13,7 @@ public class MainActivity extends Activity {
 
     private float downX, downY;
     private SeekBar damping, stiffness;
-    private SpringAnimation animX, animY;
+    private SpringAnimation animY;
     private VelocityTracker velocityTracker;
     private boolean isDragging;
 
@@ -24,17 +25,18 @@ public class MainActivity extends Activity {
         damping = (SeekBar) findViewById(R.id.damping);
         velocityTracker = VelocityTracker.obtain();
         final View box = findViewById(R.id.box);
-        findViewById(R.id.root).setOnTouchListener(new View.OnTouchListener() {
+        final View root = findViewById(R.id.root);
+        root.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 switch (event.getAction()) {
                     case MotionEvent.ACTION_DOWN:
-                        float x = event.getX();
-                        float y = event.getY();
+                        float x = event.getX() - box.getTranslationX();
+                        float y = event.getY() - box.getTranslationY();
                         if (box.getLeft() < x && box.getRight() > x && box.getTop() < y && box.getBottom() > y) {
                             isDragging = true;
-                            downX = event.getX();
-                            downY = event.getY();
+                            downX = x;
+                            downY = y;
                             velocityTracker.addMovement(event);
                         }
                         return true;
@@ -49,23 +51,31 @@ public class MainActivity extends Activity {
                     case MotionEvent.ACTION_CANCEL:
                         if (isDragging) {
                             velocityTracker.computeCurrentVelocity(1000);
-                            if (box.getTranslationX() != 0) {
-                                if (animX != null) {
-                                    animX.cancel();
-                                }
-                                animX = new SpringAnimation(box, SpringAnimation.TRANSLATION_X, 0);
-                                animX.getSpring().setStiffness(getStiffness());
-                                animX.getSpring().setDampingRatio(getDamping());
-                                animX.setStartVelocity(velocityTracker.getXVelocity());
-                                animX.start();
-                            }
-                            if (box.getTranslationY() != 0) {
+                            if (box.getTranslationY() <= 0) {
                                 if (animY != null) {
                                     animY.cancel();
                                 }
                                 animY = new SpringAnimation(box, SpringAnimation.TRANSLATION_Y, 0);
                                 animY.getSpring().setStiffness(getStiffness());
                                 animY.getSpring().setDampingRatio(getDamping());
+                                animY.setMaxValue(0);
+
+                                final float upX = box.getTranslationX();
+                                final float velocityX = velocityTracker.getXVelocity();
+                                final long startTime = System.currentTimeMillis();
+                                animY.addUpdateListener(new DynamicAnimation.OnAnimationUpdateListener() {
+                                    @Override
+                                    public void onAnimationUpdate(
+                                            DynamicAnimation animation,
+                                            float value,
+                                            float velocity) {
+                                        float translationX =
+                                                upX + (System.currentTimeMillis() - startTime) * velocityX / 1000f;
+                                        translationX = Math.max(-(root.getWidth() - box.getWidth()) / 2, translationX);
+                                        translationX = Math.min(+(root.getWidth() - box.getWidth()) / 2, translationX);
+                                        box.setTranslationX(translationX);
+                                    }
+                                });
                                 animY.setStartVelocity(velocityTracker.getYVelocity());
                                 animY.start();
                             }
@@ -81,9 +91,6 @@ public class MainActivity extends Activity {
         stiffness.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                if (animX != null) {
-                    animX.getSpring().setStiffness(getStiffness());
-                }
                 if (animY != null) {
                     animY.getSpring().setStiffness(getStiffness());
                 }
@@ -102,9 +109,6 @@ public class MainActivity extends Activity {
         damping.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                if (animX != null) {
-                    animX.getSpring().setDampingRatio(getDamping());
-                }
                 if (animY != null) {
                     animY.getSpring().setDampingRatio(getDamping());
                 }

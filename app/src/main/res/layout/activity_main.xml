@@ -12,13 +12,10 @@
         android:id="@+id/box"
         android:layout_width="150dp"
         android:layout_height="150dp"
-        android:layout_marginBottom="8dp"
-        android:layout_marginTop="8dp"
         android:background="?colorAccent"
-        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/damping"/>
+        app:layout_constraintBottom_toBottomOf="parent"/>
 
     <SeekBar
         android:id="@+id/damping"
