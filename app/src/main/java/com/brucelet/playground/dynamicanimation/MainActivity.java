@@ -24,18 +24,27 @@ public class MainActivity extends Activity {
         damping = (SeekBar) findViewById(R.id.damping);
         velocityTracker = VelocityTracker.obtain();
         final View box = findViewById(R.id.box);
-        findViewById(R.id.root).setOnTouchListener(new View.OnTouchListener() {
+        final View root = findViewById(R.id.root);
+        root.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 switch (event.getAction()) {
                     case MotionEvent.ACTION_DOWN:
-                        float x = event.getX();
-                        float y = event.getY();
-                        if (box.getLeft() < x && box.getRight() > x && box.getTop() < y && box.getBottom() > y) {
-                            isDragging = true;
-                            downX = event.getX();
-                            downY = event.getY();
-                            velocityTracker.addMovement(event);
+                        if (!isDragging) {
+                            if (animX != null) {
+                                animX.cancel();
+                            }
+                            if (animY != null) {
+                                animY.cancel();
+                            }
+                            float x = event.getX() - box.getTranslationX();
+                            float y = event.getY() - box.getTranslationY();
+                            if (box.getLeft() < x && box.getRight() > x && box.getTop() < y && box.getBottom() > y) {
+                                isDragging = true;
+                                downX = x;
+                                downY = y;
+                                velocityTracker.addMovement(event);
+                            }
                         }
                         return true;
                     case MotionEvent.ACTION_MOVE:
@@ -49,26 +58,43 @@ public class MainActivity extends Activity {
                     case MotionEvent.ACTION_CANCEL:
                         if (isDragging) {
                             velocityTracker.computeCurrentVelocity(1000);
-                            if (box.getTranslationX() != 0) {
-                                if (animX != null) {
-                                    animX.cancel();
-                                }
-                                animX = new SpringAnimation(box, SpringAnimation.TRANSLATION_X, 0);
-                                animX.getSpring().setStiffness(getStiffness());
-                                animX.getSpring().setDampingRatio(getDamping());
-                                animX.setStartVelocity(velocityTracker.getXVelocity());
-                                animX.start();
+
+                            if (animX != null) {
+                                animX.cancel();
                             }
-                            if (box.getTranslationY() != 0) {
-                                if (animY != null) {
-                                    animY.cancel();
-                                }
-                                animY = new SpringAnimation(box, SpringAnimation.TRANSLATION_Y, 0);
-                                animY.getSpring().setStiffness(getStiffness());
-                                animY.getSpring().setDampingRatio(getDamping());
-                                animY.setStartVelocity(velocityTracker.getYVelocity());
-                                animY.start();
+                            float translationX = box.getTranslationX();
+                            float targetX;
+                            if (translationX < -root.getWidth() / 6) {
+                                targetX = root.getLeft() - box.getLeft();
+                            } else if (translationX > root.getWidth() / 6) {
+                                targetX = root.getRight() - box.getRight();
+                            } else {
+                                targetX = 0;
                             }
+                            animX = new SpringAnimation(box, SpringAnimation.TRANSLATION_X, targetX);
+                            animX.getSpring().setStiffness(getStiffness());
+                            animX.getSpring().setDampingRatio(getDamping());
+                            animX.setStartVelocity(velocityTracker.getXVelocity());
+                            animX.start();
+
+                            if (animY != null) {
+                                animY.cancel();
+                            }
+                            float translationY = box.getTranslationY();
+                            float targetY;
+                            if (translationY < -root.getHeight() / 6) {
+                                targetY = root.getTop() - box.getTop() + damping.getBottom();
+                            } else if (translationY > root.getHeight() / 6) {
+                                targetY = root.getBottom() - box.getBottom();
+                            } else {
+                                targetY = 0;
+                            }
+                            animY = new SpringAnimation(box, SpringAnimation.TRANSLATION_Y, targetY);
+                            animY.getSpring().setStiffness(getStiffness());
+                            animY.getSpring().setDampingRatio(getDamping());
+                            animY.setStartVelocity(velocityTracker.getYVelocity());
+                            animY.start();
+
                             velocityTracker.clear();
                             isDragging = false;
                         }
